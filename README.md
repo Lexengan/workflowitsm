@@ -72,12 +72,11 @@ Les données sont stockées dans sept tables dédiées (`glpi_plugin_glpiworkflo
 
 Le plugin est accessible depuis le menu **Plugins > Workflows ITSM**.
 
-![Menu Plugins > Workflows ITSM](workflowitsm
-/01_menu.PNG)
+![Menu Plugins > Workflows ITSM](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/01_menu.PNG)
 
 La page d'accueil liste tous les workflows créés avec leur type ITIL, leur statut (Actif/Inactif) et les actions disponibles : Designer, Modifier, Supprimer.
 
-![Liste des workflows](images/02_liste_workflows.png)
+![Liste des workflows](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/02_liste_workflows.PNG)
 
 ### Créer un workflow
 
@@ -87,11 +86,11 @@ Cliquer **+ Créer un workflow** pour définir le nom, le type ITIL (Ticket, Pro
 
 Le designer présente trois zones : la palette d'actions à gauche, le canvas central avec les étapes ordonnées, et le panneau de configuration à droite.
 
-![Designer — vue globale avec 6 étapes](images/03_designer_global.png)
+![Designer — vue globale avec 6 étapes](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/03_designer_global.PNG)
 
 Pour configurer une étape, cliquer sur l'icône engrenage de la ligne correspondante. Le panneau de droite affiche les paramètres de l'action choisie.
 
-![Configuration d'une étape avec modèle de tâche](images/04_config_etape.png)
+![Configuration d'une étape avec modèle de tâche](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/04_config_etape.PNG)
 
 Les paramètres disponibles varient selon l'action :
 
@@ -104,7 +103,7 @@ Les paramètres disponibles varient selon l'action :
 
 Cliquer sur l'icône filtre (entonnoir) d'une étape pour ouvrir la modale de conditions. Chaque étape peut avoir une ou plusieurs conditions combinées par opérateur `ET` (toutes vraies) ou `OU` (au moins une vraie).
 
-![Modale de conditions — Catégorie ITIL et statut de tâche](images/05_conditions.png)
+![Modale de conditions — Catégorie ITIL et statut de tâche](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/05_conditions.PNG)
 
 ### Enregistrer et activer
 
@@ -177,43 +176,43 @@ Ce workflow illustre les possibilités du plugin sur un processus réel en six �
 
 À la création du ticket, l'étape 1 évalue la condition `CategoryCreatedCondition` (catégorie = onboarding). La première tâche apparaît immédiatement, affectée à l'équipe N2 Sécurité & Accès.
 
-![Ticket créé — première tâche générée automatiquement](images/06_ticket_tache1.png)
+![Ticket créé — première tâche générée automatiquement](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/06_ticket_tache1.PNG)
 
 ### Progression par le cron
 
 Le cron `executeScheduledWorkflows` (1 minute) maintient les exécutions actives. À chaque passage, il évalue les conditions des étapes en attente.
 
-![Action automatique executeScheduledWorkflows](images/07_cron.png)
+![Action automatique executeScheduledWorkflows](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/07_cron.PNG)
 
 ### Étape 2 — Préparation du poste
 
 Le technicien crée le compte AD, réalise la synchro LDAP, puis passe la tâche à **Fait**. Au passage suivant du cron, la condition `TaskStatusCondition (count_at_least, min_count=1, Fait)` devient vraie : la tâche « Préparation poste de travail » est créée, affectée au **groupe attribué du ticket** (dynamique).
 
-![Tâche 2 créée après passage de la tâche 1 à Fait](images/08_ticket_tache2.png)
+![Tâche 2 créée après passage de la tâche 1 à Fait](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/08_ticket_tache2.PNG)
 
 ### Étape 3 — Prise de RDV
 
 Après passage de la tâche 2 à Fait (`min_count=2`), la tâche « Prise de rendez-vous » apparaît. L'observateur **Rousseau Claire** (le nouvel arrivant, ajouté manuellement par le technicien après synchro LDAP) est visible dans les acteurs.
 
-![Tâche 3 créée — observateur ajouté](images/09_ticket_tache3_observateur.png)
+![Tâche 3 créée — observateur ajouté](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/09_ticket_tache3_observateur.PNG)
 
 ### Étape 4 — Affectation du matériel
 
 L'ordinateur **INJECT-LAPTOP-EVA-001** a été lié au ticket dans les éléments liés. À l'étape 4 (`min_count=3`), `AssignAssetToObserverAction` lit l'observateur du ticket et met à jour `users_id` sur l'ordinateur.
 
-![Ordinateur lié au ticket visible dans les éléments](images/10_ticket_ordinateur_lie.png)
+![Ordinateur lié au ticket visible dans les éléments](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/10_ticket_ordinateur_lie.PNG)
 
 ### Étape 5 — Résolution automatique
 
 Dans la même passe du cron, l'étape 5 s'enchaîne immédiatement : la solution « Comptes et habilitations créés. Matériel préparé et mis à disposition du nouvel arrivant. » est ajoutée et le ticket passe en **Résolu**.
 
-![Ticket résolu avec solution automatique](images/11_ticket_resolu.png)
+![Ticket résolu avec solution automatique](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/11_ticket_resolu.PNG)
 
 ### Résultat final
 
 Le profil utilisateur de Rousseau Claire affiche l'ordinateur **INJECT-LAPTOP-EVA-001** dans ses éléments utilisés — affectation réalisée automatiquement par le workflow sans intervention manuelle.
 
-![Profil utilisateur — ordinateur affecté](images/12_utilisateur_materiel.png)
+![Profil utilisateur — ordinateur affecté](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/12_utilisateur_materiel.PNG)
 
 ---
 
