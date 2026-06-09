@@ -3,7 +3,7 @@
   <name>Workflows ITSM</name>
   <key>glpiworkflow</key>
   <state>stable</state>
-  <logo>https://raw.githubusercontent.com/Lexengan/workflowitsm/main/logo.png</logo>
+  <logo>https://raw.githubusercontent.com/Lexengan/workflowitsm/main/logo_wf%2040%2040.png</logo>
   <description>
     <short>
       <en>Sequential ITSM workflow engine for GLPI 11 — automates task orchestration on tickets via a drag-and-drop designer.</en>
