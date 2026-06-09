@@ -72,7 +72,8 @@ Les données sont stockées dans sept tables dédiées (`glpi_plugin_glpiworkflo
 
 Le plugin est accessible depuis le menu **Plugins > Workflows ITSM**.
 
-![Menu Plugins > Workflows ITSM](images/01_menu.png)
+![Menu Plugins > Workflows ITSM](workflowitsm
+/01_menu.PNG)
 
 La page d'accueil liste tous les workflows créés avec leur type ITIL, leur statut (Actif/Inactif) et les actions disponibles : Designer, Modifier, Supprimer.
 
