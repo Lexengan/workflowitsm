@@ -1,5 +1,7 @@
 # glpiworkflow — Moteur de workflows ITSM pour GLPI 11
 
+**Version** : 1.6.5 | **Référence** : SPEC-GLPI-WF-001 v1.0 | **MO** : MO-GLPI-PLUGIN-002 v2
+
 Plugin GLPI 11 permettant de définir, visualiser et exécuter des **workflows ITSM séquentiels automatisés** directement dans GLPI, sans développement supplémentaire. Les workflows déclenchent des actions conditionnelles sur les tickets (création de tâches, ajout de suivis, résolution, affectation de matériel) en fonction de l'évolution de l'objet ITIL et des conditions métier configurées.
 
 ---
@@ -15,12 +17,32 @@ Plugin GLPI 11 permettant de définir, visualiser et exécuter des **workflows I
   - [Configurer une étape](#configurer-une-étape)
   - [Définir les conditions](#définir-les-conditions)
   - [Enregistrer et activer](#enregistrer-et-activer)
+- [Fonctionnalités](#fonctionnalités)
 - [Actions disponibles](#actions-disponibles)
 - [Conditions disponibles](#conditions-disponibles)
+  - [Demandes de service](#demandes-de-service)
+  - [Incidents](#incidents)
+  - [Gestion du parc](#gestion-du-parc)
+  - [Base de connaissances](#base-de-connaissances)
+- [Enchaînement séquentiel fiable](#enchaînement-séquentiel-fiable)
 - [Cas d'usage : workflow onboarding](#cas-dusage--workflow-onboarding)
+  - [Déclenchement](#déclenchement)
+  - [Progression par le cron](#progression-par-le-cron)
+  - [Étape 2 — Préparation du poste](#étape-2--préparation-du-poste)
+  - [Étape 3 — Prise de RDV](#étape-3--prise-de-rdv)
+  - [Étape 4 — Affectation du matériel](#étape-4--affectation-du-matériel)
+  - [Étape 5 — Résolution automatique](#étape-5--résolution-automatique)
+  - [Résultat final](#résultat-final)
 - [Exécution et planification](#exécution-et-planification)
 - [Gestion des droits](#gestion-des-droits)
 - [Référence technique](#référence-technique)
+  - [Schéma de base de données](#schéma-de-base-de-données)
+  - [Valeurs de référence](#valeurs-de-référence)
+- [Extensibilité](#extensibilité)
+  - [Ajouter une action personnalisée](#ajouter-une-action-personnalisée)
+  - [Ajouter une condition personnalisée](#ajouter-une-condition-personnalisée)
+- [Tests](#tests)
+- [Conformité](#conformité)
 
 ---
 
@@ -54,15 +76,22 @@ Les données sont stockées dans sept tables dédiées (`glpi_plugin_glpiworkflo
 
 ## Installation
 
-**Prérequis :** GLPI 11.0.x, PHP ≥ 8.1, MariaDB 10.11.
+**Prérequis :** GLPI 11.0.x, PHP ≥ 8.1, MariaDB ≥ 10.11.
 
 1. Déposer le dossier `glpiworkflow/` dans `/var/www/glpi/plugins/`.
 2. Vider le cache : `php /var/www/glpi/bin/console cache:clear`.
 3. Redémarrer le conteneur ou le service PHP.
-4. Aller dans **Configuration > Plugins**, activer **Workflows ITSM**.
-5. Vérifier que les deux actions automatiques sont programmées dans **Administration > Actions automatiques** : `executeScheduledWorkflows` (1 min) et `resumePendingWorkflows` (5 min).
+4. Aller dans **Administration > Plugins**, activer **Workflows ITSM**.
+5. Vérifier que les deux actions automatiques sont programmées dans **Administration > Actions automatiques** :
 
-> **Note :** Après activation, les droits sont automatiquement créés sur tous les profils existants (valeur 31 = tous les droits). Ajustez-les dans **Administration > Profils > onglet Workflows ITSM**.
+| Action automatique | Fréquence recommandée | Rôle |
+|--------------------|-----------------------|------|
+| `executeScheduledWorkflows` | 1 minute | Démarre les nouvelles exécutions au déclenchement |
+| `resumePendingWorkflows` | 5 minutes | Fait progresser les exécutions en attente |
+
+> **Note :** après activation, les droits sont automatiquement créés sur tous les profils existants (valeur 31 = tous les droits). Ajustez-les dans **Administration > Profils > onglet Workflows ITSM**.
+
+> **Note :** Node.js et npm ne sont pas requis en production. Le fichier Vue.js compilé est inclus dans l'archive.
 
 ---
 
@@ -86,7 +115,7 @@ Cliquer **+ Créer un workflow** pour définir le nom, le type ITIL (Ticket, Pro
 
 Le designer présente trois zones : la palette d'actions à gauche, le canvas central avec les étapes ordonnées, et le panneau de configuration à droite.
 
-![Designer — vue globale avec 6 étapes](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/03_designer_global.PNG)
+![Designer — vue globale](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/03_designer_global.PNG)
 
 Pour configurer une étape, cliquer sur l'icône engrenage de la ligne correspondante. Le panneau de droite affiche les paramètres de l'action choisie.
 
@@ -103,7 +132,7 @@ Les paramètres disponibles varient selon l'action :
 
 Cliquer sur l'icône filtre (entonnoir) d'une étape pour ouvrir la modale de conditions. Chaque étape peut avoir une ou plusieurs conditions combinées par opérateur `ET` (toutes vraies) ou `OU` (au moins une vraie).
 
-![Modale de conditions — Catégorie ITIL et statut de tâche](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/05_conditions.PNG)
+![Modale de conditions](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/05_conditions.PNG)
 
 ### Enregistrer et activer
 
@@ -111,64 +140,100 @@ Cliquer **Enregistrer** en haut à droite pour persister l'ensemble du workflow 
 
 ---
 
+## Fonctionnalités
+
+- **Designer drag & drop** : création visuelle de workflows par glissement d'actions, réordonnancement par drag, suppression par étape
+- **8 actions natives** couvrant les principaux cas ITSM
+- **28 conditions natives** réparties sur 4 domaines : demandes, incidents, parc, base de connaissances
+- **Opérateurs ET / OU** entre conditions par étape
+- **Deux comportements par étape** : `Bloquante` (attend que les conditions soient vraies) ou `Conditionnelle` (saute si fausses)
+- **Gabarits de tâches GLPI** : chaque étape « Ajouter une tâche » peut s'appuyer sur un gabarit existant
+- **Groupe dynamique** : affectation de tâche au groupe attribué du ticket au moment de l'exécution
+- **Affectation de matériel** : lier l'asset du ticket au demandeur ou à l'observateur (bénéficiaire)
+- **Anti-doublon** : une seule exécution par couple workflow + ticket
+- **Catalogue d'actions** : activation / désactivation individuelle de chaque action et condition
+- **Journal d'exécution** : traçabilité complète par workflow, étape et ticket
+- **Gestion des droits** : onglet dédié dans Administration > Profils
+
+---
+
 ## Actions disponibles
 
-| Action | Description |
-|--------|-------------|
-| **Ajouter une tâche** | Crée une tâche sur le ticket, optionnellement depuis un gabarit GLPI. Supporte l'affectation à un groupe fixe ou au groupe attribué du ticket. |
-| **Ajouter un suivi** | Ajoute un message de suivi interne ou public sur le ticket. |
-| **Ajouter une solution et résoudre** | Ajoute une solution et passe le ticket en statut Résolu. |
-| **Changer le statut du ticket** | Modifie le statut du ticket vers une valeur configurée. |
-| **Affecter à un groupe** | Affecte le ticket à un groupe spécifique. |
-| **Affecter le matériel au demandeur** | Met à jour le champ `users_id` du matériel lié au ticket en le définissant sur le demandeur (type REQUESTER). |
-| **Affecter le matériel au bénéficiaire (observateur)** | Met à jour le champ `users_id` du matériel lié au ticket en le définissant sur l'observateur (type OBSERVER). Cas d'usage : onboarding où demandeur ≠ bénéficiaire. |
-| **Ouvrir un ticket demande** | Crée un nouveau ticket de type demande. |
+| Action | Classe | Description |
+|--------|--------|-------------|
+| Ajouter une tâche | `AddTaskAction` | Crée une tâche sur le ticket (gabarit GLPI, groupe fixe ou groupe attribué dynamique) |
+| Ajouter un suivi | `AddFollowupAction` | Ajoute un suivi interne ou public |
+| Ajouter une solution et résoudre | `AddSolutionAction` | Ajoute une solution et passe le ticket en **Résolu** |
+| Changer le statut du ticket | `ChangeStatusAction` | Modifie le statut du ticket vers une valeur configurée |
+| Affecter à un groupe | `AssignGroupAction` | Affecte le ticket à un groupe spécifique |
+| Affecter le matériel au demandeur | `AssignAssetToRequesterAction` | Met à jour `users_id` du matériel lié sur le **demandeur** (REQUESTER, type=1) |
+| Affecter le matériel au bénéficiaire | `AssignAssetToObserverAction` | Met à jour `users_id` du matériel lié sur l'**observateur** (OBSERVER, type=3) — cas onboarding |
+| Ouvrir un ticket demande | `OpenTicketAction` | Crée un nouveau ticket de type demande |
 
 ---
 
 ## Conditions disponibles
 
-Les conditions sont regroupées par domaine dans le catalogue.
+Le catalogue complet est accessible depuis **Plugins > Workflows ITSM > Catalogue d'actions**. Chaque condition peut être activée ou désactivée indépendamment.
 
 ### Demandes de service
 
-| Condition | Paramètres |
-|-----------|------------|
-| Catégorie ITIL particulière | `itilcategories_id` — vérifie la catégorie du ticket à sa création |
-| Statut de tâche | `task_scope` (Au moins N, Au moins une, Toutes, Dernière), `min_count`, `status` |
-| Ticket ouvert depuis (heures) | `hours` — durée depuis l'ouverture |
-| SLA bientôt dépassé | `minutes_before` — fenêtre d'alerte avant dépassement |
-| SLA dépassé | — |
+| Condition | Classe | Paramètres clés |
+|-----------|--------|-----------------|
+| Catégorie ITIL particulière | `CategoryCreatedCondition` | `itilcategories_id` |
+| Statut de tâche | `TaskStatusCondition` | `task_scope` (count_at_least / any / all / last), `min_count`, `status` |
+| Ticket ouvert depuis (heures) | `TicketOpenSinceCondition` | `hours` |
+| SLA bientôt dépassé | `SlaAboutToBreachCondition` | `minutes_before` |
+| SLA dépassé | `SlaBreachedCondition` | — |
 
 ### Incidents
 
-| Condition | Paramètres |
-|-----------|------------|
-| Priorité au moins | `priority` |
-| Type de ticket | `ticket_type` (Incident / Demande) |
-| Ticket réouvert | — |
+| Condition | Classe | Paramètres clés |
+|-----------|--------|-----------------|
+| Priorité au moins | `PriorityAtLeastCondition` | `priority` |
+| Type de ticket | `TicketTypeCondition` | `ticket_type` (Incident / Demande) |
+| Ticket réouvert | `TicketReopenedCondition` | — |
 
 ### Gestion du parc
 
-| Condition | Paramètres |
-|-----------|------------|
-| Matériel lié | `itemtype` — type de matériel présent dans les éléments liés |
-| Garantie expirée | `itemtype` |
-| Âge du matériel | `itemtype`, `max_age_years` |
+| Condition | Classe | Paramètres clés |
+|-----------|--------|-----------------|
+| Matériel lié | `AssetLinkedCondition` | `itemtype` |
+| Garantie expirée | `WarrantyExpiredCondition` | `itemtype` |
+| Âge du matériel | `AssetAgeCondition` | `itemtype`, `max_age_years` |
 
 ### Base de connaissances
 
-| Condition | Paramètres |
-|-----------|------------|
-| Article KB lié | — |
+| Condition | Classe | Paramètres clés |
+|-----------|--------|-----------------|
+| Article KB lié | `KbArticleLinkedCondition` | — |
 
-> Le catalogue complet est accessible depuis **Plugins > Workflows ITSM > Catalogue d'actions**. Chaque action et condition peut être activée ou désactivée indépendamment.
+---
+
+## Enchaînement séquentiel fiable
+
+Pour orchestrer des tâches séquentielles (chaque tâche se déclenche seulement quand la précédente est terminée), utiliser `TaskStatusCondition` avec le scope `count_at_least` et des seuils croissants :
+
+| Étape | Action | Condition |
+|-------|--------|-----------|
+| 1 | Crée tâche A | `CategoryCreatedCondition` |
+| 2 | Crée tâche B | `count_at_least, min_count=1, status=2` |
+| 3 | Crée tâche C | `count_at_least, min_count=2, status=2` |
+| 4 | Résout le ticket | `count_at_least, min_count=3, status=2` |
+
+Valeurs du paramètre `status` (vérifié `Planning.php:83-85`) :
+
+| Valeur | Constante | Libellé |
+|--------|-----------|---------|
+| `0` | `Planning::INFO` | Information |
+| `1` | `Planning::TODO` | À faire |
+| `2` | `Planning::DONE` | Fait |
 
 ---
 
 ## Cas d'usage : workflow onboarding
 
-Ce workflow illustre les possibilités du plugin sur un processus réel en six étapes.
+Ce workflow illustre les possibilités du plugin sur un processus réel en cinq étapes.
 
 **Contexte :** un manager ou un responsable RH crée un ticket de catégorie « Demandes > Accès > Demande onboarding » pour un nouveau collaborateur. Plusieurs équipes interviennent séquentiellement.
 
@@ -204,7 +269,7 @@ L'ordinateur **INJECT-LAPTOP-EVA-001** a été lié au ticket dans les élément
 
 ### Étape 5 — Résolution automatique
 
-Dans la même passe du cron, l'étape 5 s'enchaîne immédiatement : la solution « Comptes et habilitations créés. Matériel préparé et mis à disposition du nouvel arrivant. » est ajoutée et le ticket passe en **Résolu**.
+Dans la même passe du cron, l'étape 5 s'enchaîne immédiatement : la solution est ajoutée et le ticket passe en **Résolu**.
 
 ![Ticket résolu avec solution automatique](https://raw.githubusercontent.com/Lexengan/workflowitsm/main/11_ticket_resolu.PNG)
 
@@ -225,11 +290,11 @@ Le moteur fonctionne en mode **asynchrone** : les actions ne sont pas exécutée
 | `executeScheduledWorkflows` | 1 minute | Démarre les nouvelles exécutions au déclenchement |
 | `resumePendingWorkflows` | 5 minutes | Fait progresser les exécutions en attente |
 
-**Logique d'enchaînement séquentiel :** les étapes bloquantes utilisent la condition `TaskStatusCondition` avec le scope `count_at_least` et des seuils croissants (`min_count = 1, 2, 3…`). Chaque étape attend qu'un palier supérieur de tâches terminées soit atteint, garantissant l'ordre sans cibler une tâche précise.
+**Logique d'enchaînement séquentiel :** les étapes bloquantes utilisent `TaskStatusCondition` avec le scope `count_at_least` et des seuils croissants. Chaque étape attend qu'un palier supérieur de tâches terminées soit atteint, garantissant l'ordre sans cibler une tâche précise.
 
-**Anti-doublon :** le moteur vérifie qu'aucune exécution n'existe déjà pour un couple workflow + ticket avant d'en créer une nouvelle, évitant les déclenchements multiples lors de la création de ticket (qui génère souvent un `item_add` suivi d'un `item_update`).
+**Anti-doublon :** le moteur vérifie qu'aucune exécution n'existe déjà pour un couple workflow + ticket avant d'en créer une nouvelle, évitant les déclenchements multiples lors de la création de ticket.
 
-> **Important :** entre chaque étape, le délai maximum est la fréquence du cron `resumePendingWorkflows` (5 minutes par défaut, configurable). Pour des enchaînements plus réactifs, réduire cette fréquence dans **Administration > Actions automatiques**.
+> **Important :** entre chaque étape, le délai maximum est la fréquence du cron `resumePendingWorkflows` (5 minutes par défaut). Pour des enchaînements plus réactifs, réduire cette fréquence dans **Administration > Actions automatiques**.
 
 ---
 
@@ -272,18 +337,81 @@ Les droits du plugin sont configurables par profil dans **Administration > Profi
 | `CommonITILActor::ASSIGN` | 2 | `CommonITILActor.php:48` |
 | `CommonITILActor::OBSERVER` | 3 | `CommonITILActor.php:49` |
 
+---
+
+## Extensibilité
+
 ### Ajouter une action personnalisée
 
-1. Créer une classe dans `src/Action/` héritant de `AbstractAction`.
-2. Implémenter `execute()`, `getConfigFields()`, `getLabel()`, `getIcon()`.
-3. Déclarer la classe dans `WorkflowActionRegistry::allClasses()`.
-4. Activer l'action depuis le catalogue.
+```php
+namespace GlpiPlugin\Glpiworkflow\Action;
+
+final class MyCustomAction extends AbstractAction
+{
+    public function execute(string $itemtype, int $items_id, array $config): array
+    {
+        // Votre logique ici
+        return ['success' => true, 'data' => []];
+    }
+
+    public function getConfigFields(): array
+    {
+        return [
+            'my_param' => [
+                'label'    => __('Mon paramètre'),
+                'type'     => 'text',
+                'required' => true,
+            ],
+        ];
+    }
+
+    public function getLabel(): string { return __('Mon action'); }
+    public function getIcon(): string  { return 'fa-star'; }
+}
+```
+
+Déclarer ensuite la classe dans `WorkflowActionRegistry::allClasses()` et activer l'action depuis le catalogue.
 
 ### Ajouter une condition personnalisée
 
-1. Créer une classe dans `src/Condition/` héritant de `AbstractCondition`.
-2. Implémenter `evaluate()`, `getParamFields()`, `getLabel()`, `getDomain()`.
-3. Déclarer la classe dans `WorkflowConditionRegistry::allClasses()`.
+```php
+namespace GlpiPlugin\Glpiworkflow\Condition;
+
+final class MyCondition extends AbstractCondition
+{
+    public function evaluate(string $itemtype, int $items_id, array $parameters): bool
+    {
+        // Retourner true si la condition est remplie
+        return true;
+    }
+
+    public function getParamFields(): array { return []; }
+    public function getLabel(): string      { return __('Ma condition'); }
+    public function getDomain(): string     { return __('Mon domaine'); }
+}
+```
+
+Déclarer la classe dans `WorkflowConditionRegistry::allClasses()`.
+
+---
+
+## Tests
+
+```bash
+./vendor/bin/phpunit phpunit/functional/
+./vendor/bin/phpunit phpunit/functional/ParameterValidationTest.php
+```
+
+---
+
+## Conformité
+
+- ✅ PSR-4 dans `src/` — `inc/` interdit
+- ✅ Contrôleurs Symfony dans `src/Controller/` — zéro fichier `front/` ou `ajax/` créé
+- ✅ Zéro requête SQL brute — `DBmysqlIterator` exclusivement
+- ✅ Jeton CSRF sur tous les formulaires POST (`Session::getNewCSRFToken()`) et en-têtes AJAX (`X-Glpi-Csrf-Token` + `X-Requested-With`)
+- ✅ PSR-12 : 0 erreur, 0 warning (PHP_CodeSniffer 4.0.2)
+- ✅ PHPStan niveau 3 : 0 erreur de logique
 
 ---
 
