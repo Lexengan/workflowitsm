@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <name>Workflows ITSM</name>
+  <key>glpiworkflow</key>
+  <state>stable</state>
+  <logo>https://raw.githubusercontent.com/Lexengan/workflowitsm/main/logo.png</logo>
+  <description>
+    <short>
+      <en>Sequential ITSM workflow engine for GLPI 11 — automates task orchestration on tickets via a drag-and-drop designer.</en>
+      <fr>Moteur de workflows ITSM séquentiels pour GLPI 11 — orchestre automatiquement les tâches sur les tickets via un designer drag-and-drop.</fr>
+    </short>
+    <long>
+      <en>GLPI 11 plugin to define, visualize and execute automated sequential ITSM workflows without additional development. 8 native actions (add task with template, followup, solution, status change, group assignment, asset assignment to requester or observer), 28 native conditions across 4 domains (service requests, incidents, asset management, knowledge base), AND/OR operators per step, blocking or conditional step behavior, dynamic group assignment, persistent state machine driven by two GLPI cron tasks, deduplication per workflow + ticket pair, full execution log, per-profile rights management.</en>
+      <fr>Plugin GLPI 11 permettant de définir, visualiser et exécuter des workflows ITSM séquentiels automatisés sans développement supplémentaire. 8 actions natives (ajout de tâche avec gabarit, suivi, solution, changement de statut, affectation groupe, affectation matériel au demandeur ou à l'observateur), 28 conditions natives sur 4 domaines (demandes, incidents, parc, base de connaissances), opérateurs ET/OU par étape, comportement bloquant ou conditionnel, groupe dynamique, moteur asynchrone piloté par deux crons GLPI, anti-doublon par couple workflow + ticket, journal d'exécution complet, gestion des droits par profil.</fr>
+    </long>
+  </description>
+  <homepage>https://github.com/Lexengan/workflowitsm</homepage>
+  <download>https://github.com/Lexengan/workflowitsm/releases</download>
+  <issues>https://github.com/Lexengan/workflowitsm/issues</issues>
+  <readme>https://github.com/Lexengan/workflowitsm/blob/main/README.md</readme>
+  <changelog>https://github.com/Lexengan/workflowitsm/releases</changelog>
+  <authors>
+    <author>Alexandre Thébaud</author>
+  </authors>
+  <versions>
+    <version>
+      <num>1.6.5</num>
+      <compatibility>~11.0.0</compatibility>
+      <download_url>https://github.com/Lexengan/workflowitsm/releases/download/v1.6.5/glpiworkflow-1.6.5.tar.gz</download_url>
+    </version>
+  </versions>
+  <langs>
+    <lang>fr_FR</lang>
+    <lang>en_GB</lang>
+  </langs>
+  <license>GPL v2+</license>
+  <tags>
+    <en>
+      <tag>workflow</tag>
+      <tag>automation</tag>
+      <tag>itsm</tag>
+      <tag>tasks</tag>
+      <tag>tickets</tag>
+      <tag>onboarding</tag>
+    </en>
+    <fr>
+      <tag>workflow</tag>
+      <tag>automatisation</tag>
+      <tag>itsm</tag>
+      <tag>tâches</tag>
+      <tag>tickets</tag>
+      <tag>onboarding</tag>
+    </fr>
+  </tags>
+</root>
